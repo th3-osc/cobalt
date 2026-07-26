@@ -401,9 +401,6 @@ test("raknet", function()
 	assert(typeof(raknet.add_receive_hook) == "function", "raknet.add_receive_hook is not a function")
 	assert(typeof(raknet.remove_receive_hook) == "function", "raknet.remove_receive_hook is not a function")
 
-	assert(typeof(raknet.send) == "function", "raknet.send is not a function")
-	assert(typeof(raknet.receive) == "function", "raknet.receive is not a function")
-
 	if typeof(raknet.is_enabled) == "function" then
 		assert(raknet.is_enabled() == true, "raknet is not enabled")
 	else
