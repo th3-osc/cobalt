@@ -246,7 +246,7 @@ return function(props: {
 	end
 
 	function List:RefreshLogButton(Log)
-		if not (Log.Button and self.CurrentTab and self.CurrentTab.Logs[Log.Instance] == Log) then
+		if not (Log.Button and self.CurrentTab and self.CurrentTab.Name == Log.Type) then
 			return
 		end
 

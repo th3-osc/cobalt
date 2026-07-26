@@ -293,7 +293,8 @@ return function(props: {
 	end
 
 	local function HandleSearch(Text: string, Type: string)
-		for RemoteInstance, Log in pairs(wax.shared.Logs[Type]) do
+		for _, Log in pairs(wax.shared.Logs[Type]) do
+			local RemoteInstance = Log.Instance
 			local SearchResult = Search.ResultByLog[Log]
 			if not SearchResult then
 				SearchResult = CreateSearchResult(RemoteInstance, Type)

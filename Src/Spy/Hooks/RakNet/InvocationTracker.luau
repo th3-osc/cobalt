@@ -5,7 +5,7 @@ InvocationTracker.__index = InvocationTracker
 
 export type Tracker = typeof(setmetatable(
 	{} :: {
-		Entries: { [Instance]: { [number]: { Value: any, CreatedAt: number } } },
+		Entries: { [string]: { [number]: { Value: any, CreatedAt: number } } },
 		TimeoutSeconds: number,
 		LastPrune: number,
 	},
@@ -14,7 +14,7 @@ export type Tracker = typeof(setmetatable(
 
 function InvocationTracker.new(timeoutSeconds: number?): Tracker
 	return setmetatable({
-		Entries = setmetatable({}, { __mode = "k" }),
+		Entries = {},
 		TimeoutSeconds = timeoutSeconds or DEFAULT_TIMEOUT_SECONDS,
 		LastPrune = os.clock(),
 	}, InvocationTracker)
@@ -43,10 +43,11 @@ end
 function InvocationTracker.Add(self: Tracker, instance: Instance, invokeId: number, value: any)
 	self:Prune()
 
-	local entries = self.Entries[instance]
+	local key = wax.shared.GetDebugId(instance)
+	local entries = self.Entries[key]
 	if not entries then
 		entries = {}
-		self.Entries[instance] = entries
+		self.Entries[key] = entries
 	end
 
 	entries[invokeId] = {
@@ -55,10 +56,23 @@ function InvocationTracker.Add(self: Tracker, instance: Instance, invokeId: numb
 	}
 end
 
+function InvocationTracker.Has(self: Tracker, instance: Instance, invokeId: number): boolean
+	self:Prune()
+
+	local entries = self.Entries[wax.shared.GetDebugId(instance)]
+	if not entries then
+		return false
+	end
+
+	local entry = entries[invokeId]
+	return entry ~= nil and os.clock() - entry.CreatedAt < self.TimeoutSeconds
+end
+
 function InvocationTracker.Consume(self: Tracker, instance: Instance, invokeId: number): any?
 	self:Prune()
 
-	local entries = self.Entries[instance]
+	local key = wax.shared.GetDebugId(instance)
+	local entries = self.Entries[key]
 	if not entries then
 		return nil
 	end
@@ -66,7 +80,7 @@ function InvocationTracker.Consume(self: Tracker, instance: Instance, invokeId: 
 	local entry = entries[invokeId]
 	entries[invokeId] = nil
 	if next(entries) == nil then
-		self.Entries[instance] = nil
+		self.Entries[key] = nil
 	end
 
 	if not entry or os.clock() - entry.CreatedAt >= self.TimeoutSeconds then

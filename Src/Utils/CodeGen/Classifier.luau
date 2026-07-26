@@ -73,13 +73,13 @@ Classifier.MethodLookupTable = MethodLookupTable
 --[[
     Determines the scenario of a call.
 
-    Shape:
+	Shape:
     - Request (Client -> Server)
     - SSE (Server Sent Event)
     - Signal (Client -> Server)
 
-    @param CallInfo
-    @return Scenario
+    @param CallInfo: Types.CallInfo
+    @return Types.Scenario
 ]]
 function Classifier.DetermineScenario(CallInfo: Types.CallInfo): Types.Scenario
 	local Type = CallInfo.Type

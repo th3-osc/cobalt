@@ -5,9 +5,10 @@ local SafePack = wax.shared.SafePack
 local InterceptorUtils = {}
 
 function InterceptorUtils.GetLog(instance: Instance, direction: "Outgoing" | "Incoming")
-	local log = wax.shared.Logs[direction][instance]
+	local debugId = wax.shared.GetDebugId(instance)
+	local log = wax.shared.Logs[direction][debugId]
 	if not log then
-		log = wax.shared.NewLog(instance, direction, getcallingscript())
+		log = wax.shared.NewLog(instance, direction, getcallingscript(), debugId)
 	end
 
 	return log

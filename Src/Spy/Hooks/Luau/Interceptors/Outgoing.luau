@@ -102,9 +102,11 @@ end
 	@return Log: The log for the instance and direction.
 ]]
 local function GetLog(Instance: Instance, Direction: "Outgoing" | "Incoming")
-	local Log = wax.shared.Logs[Direction][Instance]
+	local DebugId = wax.shared.GetDebugId(Instance)
+
+	local Log = wax.shared.Logs[Direction][DebugId]
 	if not Log then
-		Log = wax.shared.NewLog(Instance, Direction, getcallingscript())
+		Log = wax.shared.NewLog(Instance, Direction, getcallingscript(), DebugId)
 	end
 
 	return Log
@@ -134,6 +136,9 @@ end
 ]]
 local function HandleLogging(TargetInstance: Instance, Method: string, OldFunction: (...any) -> ...any, ...)
 	local Log = GetLog(TargetInstance, "Outgoing")
+	if not Log then
+		return OldFunction(...)
+	end
 	local Arguments = wax.shared.SafePack.Pack(select(2, ...))
 
 	local Info = {
@@ -251,7 +256,7 @@ wax.shared.NamecallHook = wax.shared.Hooking.HookMetaMethod(game, "__namecall", 
 		and (NamecallMethods[Method] and NamecallMethods[Method][self.ClassName])
 		and not wax.shared.ShouldIgnore(self, getcallingscript())
 	then
-		return HandleLogging(self, Method, wax.shared.NamecallHook, ...)
+		return HandleLogging(cloneref(self), Method, wax.shared.NamecallHook, ...)
 	end
 
 	return wax.shared.NamecallHook(...)
@@ -320,7 +325,7 @@ for _, Function in next, FunctionsToHook do
 			and not rawequal(self, wax.shared.Communicator)
 			and not wax.shared.ShouldIgnore(self, getcallingscript())
 		then
-			return HandleLogging(self, Method, wax.shared.Hooks[Function], ...)
+			return HandleLogging(cloneref(self), Method, wax.shared.Hooks[Function], ...)
 		end
 
 		return wax.shared.Hooks[Function](...)

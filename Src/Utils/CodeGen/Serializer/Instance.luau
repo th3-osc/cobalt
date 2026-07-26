@@ -15,6 +15,8 @@ local GetEventReferenceCode = ReferencingTemplate.GetEventReferenceCode
     @return Whether the instances are equal.
 ]]
 local function IsEqualToInstance(Object, ToCompareTo)
+	if typeof(Object) ~= "Instance" or typeof(ToCompareTo) ~= "Instance" then return false end
+
 	if rawequal(Object, ToCompareTo) then
 		return true
 	end
@@ -25,13 +27,8 @@ local function IsEqualToInstance(Object, ToCompareTo)
 
 	local ObjectDebugId, ToCompareToDebugId, ShouldCompareDebugIds = nil, nil, false
 	do
-		local identity = getidentity()
-		setthreadidentity(8)
-		local GetDebugId = Object.GetDebugId
-
-		local Success, ObjectDebugIdResult = pcall(GetDebugId, Object)
-		local Success2, ToCompareToDebugIdResult = pcall(GetDebugId, ToCompareTo)
-		setthreadidentity(identity)
+		local Success, ObjectDebugIdResult = pcall(wax.shared.GetDebugId, Object)
+		local Success2, ToCompareToDebugIdResult = pcall(wax.shared.GetDebugId, ToCompareTo)
 
 		if Success and Success2 then
 			ObjectDebugId = ObjectDebugIdResult

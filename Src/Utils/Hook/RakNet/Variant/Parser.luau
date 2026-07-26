@@ -99,40 +99,66 @@ end
 
 export type RemoteFunctionPayload = {
 	InvokeId: number,
+	IsResponse: boolean,
+	RequestRef: Codec.InstanceRef?,
 	IsError: boolean,
 	Error: string?,
 	Arguments: Arguments,
 	Offset: number,
 }
 
-function Parser:ParseRemoteFunction(offset: number, depth: number?): RemoteFunctionPayload
+function Parser:ParseRemoteFunction(offset: number, isResponse: boolean, depth: number?): RemoteFunctionPayload
 	depth = depth or 0
 	local length = buffer.len(self.Data)
 	local invokeId, nextOffset = Codec.LEB128(self.Data, offset)
+	local requestRef = nil
 
-	if nextOffset < length and buffer.readu8(self.Data, nextOffset) == 0x3D then
+	-- RemoteFunction requests carry an InstanceRef used by Roblox to correlate
+	-- the invocation. Responses omit it and begin their return arguments here.
+	if not isResponse then
+		requestRef, nextOffset = Codec.ReadInstanceRef(self.Data, nextOffset)
+	end
+
+	if isResponse and nextOffset < length and buffer.readu8(self.Data, nextOffset) == 0x3D then
 		local start = nextOffset + 1
 		local finish = start
 		while finish < length and buffer.readu8(self.Data, finish) ~= 0 do
 			finish += 1
 		end
+		if finish >= length then
+			return {
+				InvokeId = invokeId,
+				IsResponse = true,
+				RequestRef = nil,
+				IsError = true,
+				Error = nil,
+				Arguments = {
+					Values = {},
+					Count = 0,
+				},
+				Offset = -1,
+			}
+		end
 		local message = if finish > start then buffer.readstring(self.Data, start, finish - start) else ""
-		local endOffset = if finish < length then finish + 1 else finish
 		return {
 			InvokeId = invokeId,
+			IsResponse = isResponse,
+			RequestRef = requestRef,
 			IsError = true,
 			Error = message,
 			Arguments = {
 				Values = {},
 				Count = 0,
 			},
-			Offset = endOffset,
+			Offset = finish + 1,
 		}
 	end
 
 	local parsed = self:ParseArgs(nextOffset, depth)
 	return {
 		InvokeId = invokeId,
+		IsResponse = isResponse,
+		RequestRef = requestRef,
 		IsError = false,
 		Error = nil,
 		Arguments = {

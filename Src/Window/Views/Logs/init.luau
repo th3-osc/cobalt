@@ -163,10 +163,12 @@ return function(props: {
 			local CallIndex = Notification.CallIndex
 			local LogIndex = Notification.LogIndex
 
+			local InstanceDebugId = wax.shared.GetDebugId(Instance)
+
 			-- RakNet callbacks can expose an equivalent Instance through a different
 			-- userdata identity. BindableEvents also strip table metatables, so pass a
 			-- scalar index and resolve the original Log in this context instead.
-			local Log = wax.shared.Logs[Type][Instance]
+			local Log = wax.shared.Logs[Type][InstanceDebugId]
 			if not Log and LogIndex ~= nil then
 				for _, Candidate in wax.shared.Logs[Type] do
 					if Candidate.Index == LogIndex then

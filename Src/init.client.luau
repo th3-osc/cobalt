@@ -141,6 +141,15 @@ wax.shared.getrawmetatable = wax.shared.ExecutorSupport["getrawmetatable"].IsWor
 		})
 	end
 
+local RawGetDebugId = clonefunction and clonefunction(game.GetDebugId) or game.GetDebugId
+wax.shared.GetDebugId = function(Instance)
+	local identity = getthreadidentity()
+	setthreadidentity(8)
+	local id = RawGetDebugId(Instance)
+	setthreadidentity(identity)
+	return id
+end
+
 wax.shared.newcclosure = wax.shared.ExecutorName == "AWP"
 		and function(f, name)
 			local env = getfenv(f)
@@ -431,7 +440,7 @@ wax.shared.SetupLoggingConnection = function()
 			local Type = Notification.Type
 			local CallOrderInLog = Notification.CallIndex
 
-			local LogEntry = wax.shared.Logs[Type][RemoteInstance]
+			local LogEntry = wax.shared.Logs[Type][wax.shared.GetDebugId(RemoteInstance)]
 			if not LogEntry then
 				continue
 			end
@@ -463,9 +472,9 @@ wax.shared.Logs = {
 	Incoming = {},
 }
 
-wax.shared.NewLog = function(Instance, Type, CallingScript)
+wax.shared.NewLog = function(Instance, Type, CallingScript, DebugId)
 	local Log = wax.shared.Log.new(Instance, Type, wax.shared.GetTableLength(wax.shared.Logs[Type]) + 1, CallingScript)
-	wax.shared.Logs[Type][Instance] = Log
+	wax.shared.Logs[Type][DebugId] = Log
 	return Log
 end
 

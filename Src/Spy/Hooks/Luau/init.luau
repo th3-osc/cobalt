@@ -1,6 +1,7 @@
 --// Imports \\--
 local Validation = require("@src/Utils/Validation")
 local LuaEncode = require("@src/Utils/CodeGen/Serializer/LuaEncode")
+local IsEqualToInstance = require("@src/Utils/CodeGen/Serializer/Instance").IsEqualToInstance
 
 local Interceptors = script.Interceptors
 
@@ -146,7 +147,11 @@ return function(Options: Options?)
 
 			if EventType == "IncomingConnectionMetadata" then
 				local Instance, LogIndex, CallIndex, RawInfo, CyclicRefs = ...
-				local Log = wax.shared.Logs.Incoming[Instance]
+				Instance = cloneref(Instance)
+
+				local DebugId = wax.shared.GetDebugId(Instance)
+
+				local Log = wax.shared.Logs.Incoming[DebugId]
 				if not Log and LogIndex ~= nil then
 					for _, Candidate in wax.shared.Logs.Incoming do
 						if Candidate.Index == LogIndex then
@@ -189,14 +194,18 @@ return function(Options: Options?)
 			end
 
 			local Instance, Type, RawInfo, CyclicRefs = ...
-			if Instance == Channel or Instance == wax.shared.Communicator then
+			Instance = cloneref(Instance)
+
+			if IsEqualToInstance(Instance, Channel) or IsEqualToInstance(Instance, wax.shared.Communicator) then
 				return
 			end
 
-			local Log = wax.shared.Logs[Type][Instance]
+			local DebugId = wax.shared.GetDebugId(Instance)
+
+			local Log = wax.shared.Logs[Type][DebugId]
 
 			if not Log then
-				Log = wax.shared.NewLog(Instance, Type, RawInfo.Origin)
+				Log = wax.shared.NewLog(Instance, Type, RawInfo.Origin, DebugId)
 			end
 
 			local ReconstructedInfo = ReconstructTable(RawInfo, CyclicRefs)
@@ -213,7 +222,6 @@ return function(Options: Options?)
 		--#region Actor Hooking Logic
 		-- The hooking code wont run again if cobalt is already initialized in that Actor (to address deleted actors aka LuaStateProxy stuff)
 
-		-- `HookActor` is to address Volcano returning non initialized actors inside their `getactors` function.
 		-- God this code is so ass 🥹
 		local function HookActor(TargetActor: Actor)
 			local Hooked = false
@@ -231,11 +239,20 @@ return function(Options: Options?)
 			end
 		end
 
-		for _, Category in { getactors(), getdeletedactors and getdeletedactors() or {} } do
-			for _, TargetActor in Category do
-				task.spawn(HookActor, TargetActor)
+		if getactorstates then
+			for _, LuaStateProxy in getactorstates() do
+				if not LuaStateProxy.IsActorState then continue end
+
+				LuaStateProxy:Execute(ActorEnvironmentCode, CommunicationChannelID, LuaStateProxy:GetActors()[1])
+			end
+		else
+			for _, Category in { getactors(), getdeletedactors and getdeletedactors() or {} } do
+				for _, TargetActor in Category do
+					task.spawn(HookActor, TargetActor)
+				end
 			end
 		end
+
 
 		local ActorHookConnection
 		local function HandleInstance(Instance)

@@ -1,5 +1,7 @@
 local LogStore = {}
 
+local IsEqualToInstance = require("@src/Utils/CodeGen/Serializer/Instance").IsEqualToInstance
+
 function LogStore.GetMatching(FilterInstance: Instance?, FilterType: string?): { any }
 	local Logs = {}
 
@@ -9,7 +11,7 @@ function LogStore.GetMatching(FilterInstance: Instance?, FilterType: string?): {
 		end
 
 		for _, Log in pairs(LogCategory) do
-			if FilterInstance and Log.Instance ~= FilterInstance then
+			if FilterInstance and not IsEqualToInstance(Log.Instance, FilterInstance) then
 				continue
 			end
 

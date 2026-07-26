@@ -37,6 +37,10 @@ local function CreateHandler(Requests: Requests)
 			end
 
 			--// :InvokeServer() request (Client -> Server) \\--
+			if Requests.Outgoing:Has(Instance, Response.InvokeId) then
+				return false
+			end
+
 			local Log = InterceptorUtils.GetLog(Instance, "Outgoing")
 			local Info = {
 				Arguments = InterceptorUtils.PackArguments(Response.Arguments),
@@ -99,6 +103,8 @@ end
 return function(Requests: Requests)
 	local HandlePayload = CreateHandler(Requests)
 	return raknet.add_send_hook(Constants.PacketIds.ID_DATA, function(Message: raknet.RakNetMessage)
-		ProcessPacket(Message, HandlePayload)
+		ProcessPacket(Message, HandlePayload, function(Instance, InvokeId)
+			return Requests.Incoming:Has(Instance, InvokeId)
+		end)
 	end)
 end

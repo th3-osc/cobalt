@@ -86,12 +86,14 @@ function Spy.Apply(Cobalt, Manager)
 	end
 
 	function Cobalt.Spy:AppendLog(Instance: Instance, Type: "Incoming" | "Outgoing", Data: {})
-		local Log = wax.shared.Logs[Type][Instance] or wax.shared.NewLog(Instance, Type, nil)
+		local DebugId = wax.shared.GetDebugId(Instance)
+		local Log = wax.shared.Logs[Type][DebugId] or wax.shared.NewLog(Instance, Type, nil, DebugId)
 		Log:Call(Data)
 	end
 
 	function Cobalt:GetLog(instance: Instance, type: "Incoming" | "Outgoing")
-		return wax.shared.Logs[type][instance]
+		local DebugId = wax.shared.GetDebugId(instance)
+		return wax.shared.Logs[type][DebugId]
 	end
 end
 

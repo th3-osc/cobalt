@@ -29,7 +29,39 @@ type ActorData = {
 local Data: ActorData = COBALT_ACTOR_DATA
 
 local ChannelId, CurrentActor = ...
-CurrentActor = cloneref(CurrentActor)
+if typeof(CurrentActor) == "Instance" then
+	CurrentActor = cloneref(CurrentActor)
+end
+
+local function ResolveCurrentActor(Origin)
+	if Origin and getluastate then
+		local Success, LuaStateProxy = pcall(getluastate, Origin)
+
+		-- Best effort to find origin actor
+		if Success then
+			local Actors = LuaStateProxy:GetActors()
+			for _, Actor in Actors do
+				if Origin:IsDescendantOf(Actor) then
+					return cloneref(Actor)
+				end
+			end
+
+			if #Actors == 1 then
+				return cloneref(Actors[1])
+			end
+		end
+	end
+
+	-- A LuaState can have several actors assigned to it if the worker limit gets reached
+	-- Therefore to resolve the actual origin we use get_current_actor
+	local ResolvedActor = get_current_actor and get_current_actor()
+	if typeof(ResolvedActor) == "Instance" then
+		return cloneref(ResolvedActor)
+	end
+
+	-- Probably accurate, but maybe not
+	return CurrentActor
+end
 
 local RelayChannel = get_comm_channel(ChannelId)
 
@@ -60,9 +92,9 @@ do
 			Incoming = {},
 		}
 
-		wax.shared.NewLog = function(Instance, Type, CallingScript)
+		wax.shared.NewLog = function(Instance, Type, CallingScript, DebugId)
 			local NewLog = wax.shared.Log.new(Instance, Type, 0, CallingScript)
-			wax.shared.Logs[Type][Instance] = NewLog
+			wax.shared.Logs[Type][DebugId] = NewLog
 			return NewLog
 		end
 	end
@@ -95,6 +127,8 @@ do
 		    @return Whether the instances are equal.
 		]]
 		local function IsEqualToInstance(Object, ToCompareTo)
+			if typeof(Object) ~= "Instance" or typeof(ToCompareTo) ~= "Instance" then return false end
+
 			if rawequal(Object, ToCompareTo) then
 				return true
 			end
@@ -105,13 +139,8 @@ do
 
 			local ObjectDebugId, ToCompareToDebugId, ShouldCompareDebugIds = nil, nil, false
 			do
-				local identity = getidentity()
-				setthreadidentity(8)
-				local GetDebugId = Object.GetDebugId
-
-				local Success, ObjectDebugIdResult = pcall(GetDebugId, Object)
-				local Success2, ToCompareToDebugIdResult = pcall(GetDebugId, ToCompareTo)
-				setthreadidentity(identity)
+				local Success, ObjectDebugIdResult = pcall(wax.shared.GetDebugId, Object)
+				local Success2, ToCompareToDebugIdResult = pcall(wax.shared.GetDebugId, ToCompareTo)
 
 				if Success and Success2 then
 					ObjectDebugId = ObjectDebugIdResult
@@ -237,13 +266,13 @@ do
 			end
 		elseif Type == "MainBlock" then
 			local Instance, EventType = ...
-			local Log = wax.shared.Logs[EventType][Instance]
+			local Log = wax.shared.Logs[EventType][wax.shared.GetDebugId(Instance)]
 			if Log then
 				Log:Block()
 			end
 		elseif Type == "MainIgnore" then
 			local Instance, EventType = ...
-			local Log = wax.shared.Logs[EventType][Instance]
+			local Log = wax.shared.Logs[EventType][wax.shared.GetDebugId(Instance)]
 			if Log then
 				Log:Ignore()
 			end
@@ -288,7 +317,7 @@ do
 					Line = nil,
 					IsExecutor = Function and isexecutorclosure(Function) or false,
 					IsActor = true,
-					Actor = CurrentActor,
+					Actor = ResolveCurrentActor(Origin),
 				})
 
 				RelayChannel:Fire(
@@ -425,6 +454,15 @@ wax.shared.getrawmetatable = wax.shared.ExecutorSupport["getrawmetatable"].IsWor
 			end,
 		})
 	end
+
+local RawGetDebugId = clonefunction and clonefunction(game.GetDebugId) or game.GetDebugId
+wax.shared.GetDebugId = function(Instance)
+	local identity = getthreadidentity()
+	setthreadidentity(8)
+	local id = RawGetDebugId(Instance)
+	setthreadidentity(identity)
+	return id
+end
 
 wax.shared.newcclosure = wax.shared.ExecutorName == "AWP"
 		and function(f, name)
@@ -2440,16 +2478,32 @@ do
 
 	--// Functions \\--
 	local function GetLog(Instance: InstancesToHook, Function: (...any) -> ...any)
+		local DebugId = wax.shared.GetDebugId(Instance)
+
 		if wax.shared.ShouldIgnore(Instance, getcallingscript()) or LogConnectionFunctions[Function] then
 			return nil
 		end
 
-		local Log = wax.shared.Logs.Incoming[Instance]
+		local Log = wax.shared.Logs.Incoming[DebugId]
 		if not Log then
-			Log = wax.shared.NewLog(Instance, "Incoming", getcallingscript())
+			Log = wax.shared.NewLog(Instance, "Incoming", getcallingscript(), DebugId)
 		end
 
 		return Log
+	end
+
+	local function ResolveCallableFunction(Value: any): ((...any) -> ...any)?
+		if typeof(Value) == "function" then
+			return Value
+		end
+
+		local Success, Metatable = pcall(wax.shared.getrawmetatable, Value)
+		if not Success or not Metatable then
+			return nil
+		end
+
+		local HasCall, Call = pcall(rawget, Metatable, "__call")
+		return if HasCall and typeof(Call) == "function" then Call else nil
 	end
 
 	--[[
@@ -2537,9 +2591,11 @@ do
 		local CachedConnectionInfo = nil
 		local CachedConnectionCount = -1
 
+		local DebugId = wax.shared.GetDebugId(Instance)
+
 		local ConnectionFunction = function(...)
 			--// Skip if this remote is already ignored \\--
-			local ExistingLog = wax.shared.Logs.Incoming[Instance]
+			local ExistingLog = wax.shared.Logs.Incoming[DebugId]
 			if ExistingLog and ExistingLog.Ignored then
 				return
 			end
@@ -2693,7 +2749,8 @@ do
 		@param Function The original callback of the RemoteFunction
 		@return function Returns a function that logs all function calls to the given instance.
 	]]
-	local function CreateCallbackDetour(Instance: InstancesToHook, Callback: (...any) -> ...any)
+	local function CreateCallbackDetour(Instance: InstancesToHook, Callback: any)
+		local CallbackFunction = assert(ResolveCallableFunction(Callback), "Callback is not callable")
 		local Detour = function(...)
 			local Origin = nil
 
@@ -2704,7 +2761,7 @@ do
 
 			-- Unreliable method to get script.
 			if not Origin then
-				local Script = rawget(getfenv(Callback), "script")
+				local Script = rawget(getfenv(CallbackFunction), "script")
 				if typeof(Script) == "Instance" then
 					Origin = Script
 				end
@@ -2713,14 +2770,14 @@ do
 			local FunctionCaller = debug.info(2, "f")
 			local IsExecutor = if typeof(FunctionCaller) == "function"
 				then isexecutorclosure(FunctionCaller)
-				else isexecutorclosure(Callback)
+				else isexecutorclosure(CallbackFunction)
 
 			local Arguments = wax.shared.SafePack.Pack(...)
-			local Log = GetLog(Instance, Callback)
+			local Log = GetLog(Instance, CallbackFunction)
 			local Info = {
 				Arguments = Arguments,
 				Origin = Origin,
-				Function = Callback,
+				Function = CallbackFunction,
 				Line = nil,
 				IsExecutor = IsExecutor,
 				InvokeKind = "Callback",
@@ -2731,15 +2788,26 @@ do
 			end
 
 			local InitialEnv, InitialIdentity = getfenv(CreateCallbackDetour), getthreadidentity()
+			local IsDirectFunction = rawequal(Callback, CallbackFunction)
 
 			setthreadidentity(2)
-			setfenv(0, getfenv(Callback))
+			setfenv(0, getfenv(CallbackFunction))
+			if IsDirectFunction then
+				return HandleCallbackLogging(
+					Log,
+					Info,
+					InitialEnv,
+					InitialIdentity,
+					CallbackFunction(...)
+				)
+			end
+
 			return HandleCallbackLogging(
 				Log,
 				Info,
 				InitialEnv,
 				InitialIdentity,
-				Callback(...)
+				CallbackFunction(Callback, ...)
 			)
 		end
 
@@ -2768,11 +2836,22 @@ do
 
 			pcall(function()
 				if wax.shared.trampoline_call then
+					local OriginalEnv = getfenv(Owner.Original)
 					wax.shared.trampoline_call(function()
 						Owner.Instance[Owner.Method] = Owner.Original
-					end, {}, {})
+					end, {}, {
+						env = OriginalEnv,
+						script = rawget(OriginalEnv, "script"),
+						identity = 2
+					})
 				else
-					Owner.Instance[Owner.Method] = Owner.Original
+					task.spawn(function()
+						local OriginalEnv = getfenv(Owner.Original)
+
+						setthreadidentity(2)
+						setfenv(0, OriginalEnv)
+						Owner.Instance[Owner.Method] = Owner.Original
+					end)
 				end
 			end)
 		end
@@ -2815,13 +2894,7 @@ do
 		if CallbacksEnabled then
 			if Instance.ClassName == "RemoteFunction" or Instance.ClassName == "BindableFunction" then
 				local Success, Callback = pcall(getcallbackvalue, Instance, Method)
-				local IsCallable = (
-					typeof(Callback) == "function"
-					or wax.shared.getrawmetatable(Callback) ~= nil and typeof(
-						wax.shared.getrawmetatable(Callback)["__call"]
-					) == "function"
-					or false
-				)
+				local IsCallable = ResolveCallableFunction(Callback) ~= nil
 
 				if not Success or not IsCallable or CallbackOwners[Callback] then
 					return
@@ -2855,11 +2928,7 @@ do
 			if self.ClassName == "RemoteFunction" or self.ClassName == "BindableFunction" then
 				local Method = ClassesToHook[self.ClassName]
 
-				local IsCallable = (
-					typeof(value) == "function"
-					or wax.shared.getrawmetatable(value) ~= nil and typeof(wax.shared.getrawmetatable(value)["__call"]) == "function"
-					or false
-				)
+				local IsCallable = ResolveCallableFunction(value) ~= nil
 
 				if key == Method and IsCallable then
 					if CallbackOwners[value] then
@@ -2884,7 +2953,7 @@ do
 		@return The result of the connection.
 	]]
 	local function HandleConnectionLogging(Instance, Method, callback, ...)
-		local Log = wax.shared.Logs.Incoming[Instance]
+		local Log = wax.shared.Logs.Incoming[wax.shared.GetDebugId(Instance)]
 
 		if Log and Log.Blocked then
 			for _, Connection in getconnections(Instance[Method]) do
@@ -2959,7 +3028,9 @@ do
 			SetupConnectionAssignmentHook()
 		end
 
-		wax.shared.Connect(game.DescendantAdded:Connect(HandleInstance))
+		wax.shared.Connect(game.DescendantAdded:Connect(function(instance)
+			HandleInstance(cloneref(instance))
+		end))
 
 		--// Initialization \\--
 		local ClassesToSearch = {}
@@ -2984,7 +3055,7 @@ do
 
 		for _, Category in Categories do
 			for _, TargetInstance in next, Category do
-				HandleInstance(TargetInstance)
+				HandleInstance(cloneref(TargetInstance))
 			end
 		end
 	end

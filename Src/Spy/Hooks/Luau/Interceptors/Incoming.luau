@@ -52,16 +52,32 @@ export type Options = {
 
 --// Functions \\--
 local function GetLog(Instance: InstancesToHook, Function: (...any) -> ...any)
+	local DebugId = wax.shared.GetDebugId(Instance)
+
 	if wax.shared.ShouldIgnore(Instance, getcallingscript()) or LogConnectionFunctions[Function] then
 		return nil
 	end
 
-	local Log = wax.shared.Logs.Incoming[Instance]
+	local Log = wax.shared.Logs.Incoming[DebugId]
 	if not Log then
-		Log = wax.shared.NewLog(Instance, "Incoming", getcallingscript())
+		Log = wax.shared.NewLog(Instance, "Incoming", getcallingscript(), DebugId)
 	end
 
 	return Log
+end
+
+local function ResolveCallableFunction(Value: any): ((...any) -> ...any)?
+	if typeof(Value) == "function" then
+		return Value
+	end
+
+	local Success, Metatable = pcall(wax.shared.getrawmetatable, Value)
+	if not Success or not Metatable then
+		return nil
+	end
+
+	local HasCall, Call = pcall(rawget, Metatable, "__call")
+	return if HasCall and typeof(Call) == "function" then Call else nil
 end
 
 --[[
@@ -149,9 +165,11 @@ local function CreateConnectionFunction(Instance: InstancesToHook, Method: Metho
 	local CachedConnectionInfo = nil
 	local CachedConnectionCount = -1
 
+	local DebugId = wax.shared.GetDebugId(Instance)
+
 	local ConnectionFunction = function(...)
 		--// Skip if this remote is already ignored \\--
-		local ExistingLog = wax.shared.Logs.Incoming[Instance]
+		local ExistingLog = wax.shared.Logs.Incoming[DebugId]
 		if ExistingLog and ExistingLog.Ignored then
 			return
 		end
@@ -305,7 +323,8 @@ end
 	@param Function The original callback of the RemoteFunction
 	@return function Returns a function that logs all function calls to the given instance.
 ]]
-local function CreateCallbackDetour(Instance: InstancesToHook, Callback: (...any) -> ...any)
+local function CreateCallbackDetour(Instance: InstancesToHook, Callback: any)
+	local CallbackFunction = assert(ResolveCallableFunction(Callback), "Callback is not callable")
 	local Detour = function(...)
 		local Origin = nil
 
@@ -316,7 +335,7 @@ local function CreateCallbackDetour(Instance: InstancesToHook, Callback: (...any
 
 		-- Unreliable method to get script.
 		if not Origin then
-			local Script = rawget(getfenv(Callback), "script")
+			local Script = rawget(getfenv(CallbackFunction), "script")
 			if typeof(Script) == "Instance" then
 				Origin = Script
 			end
@@ -325,14 +344,14 @@ local function CreateCallbackDetour(Instance: InstancesToHook, Callback: (...any
 		local FunctionCaller = debug.info(2, "f")
 		local IsExecutor = if typeof(FunctionCaller) == "function"
 			then isexecutorclosure(FunctionCaller)
-			else isexecutorclosure(Callback)
+			else isexecutorclosure(CallbackFunction)
 
 		local Arguments = wax.shared.SafePack.Pack(...)
-		local Log = GetLog(Instance, Callback)
+		local Log = GetLog(Instance, CallbackFunction)
 		local Info = {
 			Arguments = Arguments,
 			Origin = Origin,
-			Function = Callback,
+			Function = CallbackFunction,
 			Line = nil,
 			IsExecutor = IsExecutor,
 			InvokeKind = "Callback",
@@ -343,15 +362,26 @@ local function CreateCallbackDetour(Instance: InstancesToHook, Callback: (...any
 		end
 
 		local InitialEnv, InitialIdentity = getfenv(CreateCallbackDetour), getthreadidentity()
+		local IsDirectFunction = rawequal(Callback, CallbackFunction)
 
 		setthreadidentity(2)
-		setfenv(0, getfenv(Callback))
+		setfenv(0, getfenv(CallbackFunction))
+		if IsDirectFunction then
+			return HandleCallbackLogging(
+				Log,
+				Info,
+				InitialEnv,
+				InitialIdentity,
+				CallbackFunction(...)
+			)
+		end
+
 		return HandleCallbackLogging(
 			Log,
 			Info,
 			InitialEnv,
 			InitialIdentity,
-			Callback(...)
+			CallbackFunction(Callback, ...)
 		)
 	end
 
@@ -380,11 +410,22 @@ wax.shared.RestoreCallbackDetours = function()
 
 		pcall(function()
 			if wax.shared.trampoline_call then
+				local OriginalEnv = getfenv(Owner.Original)
 				wax.shared.trampoline_call(function()
 					Owner.Instance[Owner.Method] = Owner.Original
-				end, {}, {})
+				end, {}, {
+					env = OriginalEnv,
+					script = rawget(OriginalEnv, "script"),
+					identity = 2
+				})
 			else
-				Owner.Instance[Owner.Method] = Owner.Original
+				task.spawn(function()
+					local OriginalEnv = getfenv(Owner.Original)
+
+					setthreadidentity(2)
+					setfenv(0, OriginalEnv)
+					Owner.Instance[Owner.Method] = Owner.Original
+				end)
 			end
 		end)
 	end
@@ -427,13 +468,7 @@ local function HandleInstance(Instance: any)
 	if CallbacksEnabled then
 		if Instance.ClassName == "RemoteFunction" or Instance.ClassName == "BindableFunction" then
 			local Success, Callback = pcall(getcallbackvalue, Instance, Method)
-			local IsCallable = (
-				typeof(Callback) == "function"
-				or wax.shared.getrawmetatable(Callback) ~= nil and typeof(
-					wax.shared.getrawmetatable(Callback)["__call"]
-				) == "function"
-				or false
-			)
+			local IsCallable = ResolveCallableFunction(Callback) ~= nil
 
 			if not Success or not IsCallable or CallbackOwners[Callback] then
 				return
@@ -467,11 +502,7 @@ local function SetupCallbackAssignmentHook()
 		if self.ClassName == "RemoteFunction" or self.ClassName == "BindableFunction" then
 			local Method = ClassesToHook[self.ClassName]
 
-			local IsCallable = (
-				typeof(value) == "function"
-				or wax.shared.getrawmetatable(value) ~= nil and typeof(wax.shared.getrawmetatable(value)["__call"]) == "function"
-				or false
-			)
+			local IsCallable = ResolveCallableFunction(value) ~= nil
 
 			if key == Method and IsCallable then
 				if CallbackOwners[value] then
@@ -496,7 +527,7 @@ end
 	@return The result of the connection.
 ]]
 local function HandleConnectionLogging(Instance, Method, callback, ...)
-	local Log = wax.shared.Logs.Incoming[Instance]
+	local Log = wax.shared.Logs.Incoming[wax.shared.GetDebugId(Instance)]
 
 	if Log and Log.Blocked then
 		for _, Connection in getconnections(Instance[Method]) do
@@ -571,7 +602,9 @@ return function(Options: Options?)
 		SetupConnectionAssignmentHook()
 	end
 
-	wax.shared.Connect(game.DescendantAdded:Connect(HandleInstance))
+	wax.shared.Connect(game.DescendantAdded:Connect(function(instance)
+		HandleInstance(cloneref(instance))
+	end))
 
 	--// Initialization \\--
 	local ClassesToSearch = {}
@@ -596,7 +629,7 @@ return function(Options: Options?)
 
 	for _, Category in Categories do
 		for _, TargetInstance in next, Category do
-			HandleInstance(TargetInstance)
+			HandleInstance(cloneref(TargetInstance))
 		end
 	end
 end

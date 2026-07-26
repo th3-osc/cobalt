@@ -107,6 +107,8 @@ end
 return function(Requests: Requests)
 	local HandlePayload = CreateHandler(Requests)
 	return raknet.add_receive_hook(Constants.PacketIds.ID_DATA, function(Message: raknet.RakNetMessage)
-		ProcessPacket(Message, HandlePayload)
+		ProcessPacket(Message, HandlePayload, function(Instance, InvokeId)
+			return Requests.Outgoing:Has(Instance, InvokeId)
+		end)
 	end)
 end
