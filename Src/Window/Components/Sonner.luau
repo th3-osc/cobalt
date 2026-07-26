@@ -21,8 +21,12 @@ local Icons = require("@src/Utils/UI/Assets/Icons")
 local Interface = require("@src/Utils/UI/Interface")
 local Animations = require("@src/Window/Utils/Animations")
 
+local NOTIFICATION_WIDTH = 250
+local NOTIFICATION_MIN_HEIGHT = 50
+local NOTIFICATION_VERTICAL_PADDING = 20
+
 local function GetHiddenPosition(Notification: GuiObject): UDim2
-	return UDim2.new(0.5, 0, 1, math.max(50, Notification.AbsoluteSize.Y + 2))
+	return UDim2.new(0.5, 0, 1, math.max(NOTIFICATION_MIN_HEIGHT, Notification.AbsoluteSize.Y + 2))
 end
 
 local function InternalCreateNotificationObject(zindex, image, text)
@@ -30,8 +34,7 @@ local function InternalCreateNotificationObject(zindex, image, text)
 		BorderSizePixel = 0,
 		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 		AnchorPoint = Vector2.new(0.5, 1),
-		Size = UDim2.new(0, 250, 0, 50),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		Size = UDim2.fromOffset(NOTIFICATION_WIDTH, NOTIFICATION_MIN_HEIGHT),
 		Position = UDim2.new(0.5, 0, 1, 500),
 		BorderColor3 = Color3.fromRGB(0, 0, 0),
 		ZIndex = zindex,
@@ -84,10 +87,9 @@ local function InternalCreateNotificationObject(zindex, image, text)
 	local Frame = Interface.New("Frame", {
 		BorderSizePixel = 0,
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		Size = UDim2.new(1, -50, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.new(1, -50, 1, 0),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 0),
 		BorderColor3 = Color3.fromRGB(0, 0, 0),
 		BackgroundTransparency = 1,
 		ZIndex = zindex + 1,
@@ -99,7 +101,7 @@ local function InternalCreateNotificationObject(zindex, image, text)
 		},
 	})
 
-	Interface.New("TextLabel", {
+	local TextLabel = Interface.New("TextLabel", {
 		BorderSizePixel = 0,
 		TextSize = 14,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -107,7 +109,7 @@ local function InternalCreateNotificationObject(zindex, image, text)
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		TextColor3 = Color3.fromRGB(255, 255, 255),
 		BackgroundTransparency = 1,
-		Size = UDim2.new(0, 200, 0, 0),
+		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BorderColor3 = Color3.fromRGB(0, 0, 0),
 		Text = text,
@@ -115,6 +117,16 @@ local function InternalCreateNotificationObject(zindex, image, text)
 		Parent = Frame,
 		TextWrapped = true,
 	})
+
+	local function UpdateHeight()
+		NotificationTemplate.Size = UDim2.fromOffset(
+			NOTIFICATION_WIDTH,
+			math.max(NOTIFICATION_MIN_HEIGHT, math.ceil(TextLabel.TextBounds.Y) + NOTIFICATION_VERTICAL_PADDING)
+		)
+	end
+
+	TextLabel:GetPropertyChangedSignal("TextBounds"):Connect(UpdateHeight)
+	UpdateHeight()
 
 	return NotificationTemplate
 end

@@ -90,15 +90,13 @@ do
 end
 
 --// Sonner (Notifications) \\--
-local NotificationWrapper = Interface.New("ScrollingFrame", {
+local NotificationWrapper = Interface.New("Frame", {
 	Name = "Sonner",
 	BackgroundTransparency = 1,
-	Size = UDim2.fromOffset(285, 115),
+	Size = UDim2.new(0, 285, 1, 0),
 	Position = UDim2.fromScale(1, 1),
 	AnchorPoint = Vector2.new(1, 1),
 	ZIndex = 5000,
-	CanvasSize = UDim2.new(0, 0, 0, 0),
-	ScrollingEnabled = false,
 	ClipsDescendants = true,
 	Parent = MainFrame,
 })
