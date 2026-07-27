@@ -31,6 +31,12 @@ export type Payload = RemoteFunctionPayload | ArgumentsPayload
 
 type IsRemoteFunctionResponse = (Instance: Instance, InvokeId: number) -> boolean
 
+local SupportedInstanceTypes = {
+	RemoteEvent = true,
+	RemoteFunction = true,
+	UnreliableRemoteEvent = true,
+}
+
 local function IsInvocationItem(ItemType: number): boolean
 	return ItemType == ItemTypes.ReliableEventInvocationItem
 	or ItemType == ItemTypes.UnreliableEventInvocationItem
@@ -72,7 +78,7 @@ local function ParseItem(
 	Offset += 2
 
 	local Instance = Lookup.Instance.ByRef(InstanceRef)
-	if not Instance then
+	if not Instance or not SupportedInstanceTypes[Instance.ClassName] then
 		return {
 			Stop = true,
 			Reason = "instance lookup failed",

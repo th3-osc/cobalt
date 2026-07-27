@@ -15,15 +15,7 @@ local GetInstanceByID = (
 	(raknet and raknet.get_instance_by_id)
 )
 
-local function IsSupportedRemote(instance: Instance): boolean
-	return instance:IsA("RemoteEvent") or instance:IsA("RemoteFunction") or instance:IsA("UnreliableRemoteEvent")
-end
-
 local function IndexInstance(instance: Instance)
-	if not IsSupportedRemote(instance) then
-		return
-	end
-
 	local Success, InstanceID = pcall(instance.GetDebugId, instance, math.huge)
 	if not Success then
 		return
@@ -38,10 +30,6 @@ local function IndexInstance(instance: Instance)
 end
 
 local function UnindexInstance(instance: Instance)
-	if not IsSupportedRemote(instance) then
-		return
-	end
-
 	local Success, InstanceID = pcall(instance.GetDebugId, instance, math.huge)
 	if not Success then
 		return
@@ -72,14 +60,14 @@ function LookupModule.Instance.Build()
 		return
 	end
 
+	LookupModule.DescendantAdded = wax.shared.Connect(game.DescendantAdded:Connect(IndexInstance))
+	LookupModule.DescendantRemoving = wax.shared.Connect(game.DescendantRemoving:Connect(UnindexInstance))
+
 	for _, category in { game:GetDescendants(), getnilinstances and getnilinstances() } do
 		for _, instance in category do
 			IndexInstance(instance)
 		end
 	end
-
-	LookupModule.DescendantAdded = wax.shared.Connect(game.DescendantAdded:Connect(IndexInstance))
-	LookupModule.DescendantRemoving = wax.shared.Connect(game.DescendantRemoving:Connect(UnindexInstance))
 end
 
 function LookupModule.Instance.Destroy()
