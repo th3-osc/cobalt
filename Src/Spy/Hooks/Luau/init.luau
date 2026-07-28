@@ -44,7 +44,7 @@ return function(Options: Options?)
 		task.spawn(require, Interceptors.Outgoing)
 	end
 
-	getgenv().CobaltInitialized = true
+	getgenv().svj = true
 
 	-- Actors use a different lua vm
 	-- This means that our main thread metatable hooks dont apply in the actor's vm
