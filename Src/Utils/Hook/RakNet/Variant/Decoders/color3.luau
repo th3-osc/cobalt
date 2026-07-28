@@ -1,6 +1,8 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 --// Constants \\--
-local COLOR3_TYPE = 0x13
-local COLOR3UINT8_TYPE = 0x14
+local COLOR3_TYPE = VariantTypes.Color3
+local COLOR3UINT8_TYPE = VariantTypes.Color3uint8
 
 local DecoderModule = {
 	Type = { COLOR3_TYPE, COLOR3UINT8_TYPE },

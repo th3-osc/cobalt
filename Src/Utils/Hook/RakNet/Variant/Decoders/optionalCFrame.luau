@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local OPTIONAL_CFRAME_ALT_TYPE = 0x32
-local OPTIONAL_CFRAME_TYPE = 0x33
+local OPTIONAL_CFRAME_ALT_TYPE = VariantTypes.OptionalCoordinateFrameLegacy
+local OPTIONAL_CFRAME_TYPE = VariantTypes.OptionalCoordinateFrame
 
 local DecoderModule = {
 	Type = { OPTIONAL_CFRAME_ALT_TYPE, OPTIONAL_CFRAME_TYPE },

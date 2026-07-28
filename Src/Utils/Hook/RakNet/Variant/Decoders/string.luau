@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local STRING_TYPE = 0x02
-local BINARY_STRING_TYPE = 0x08
+local STRING_TYPE = VariantTypes.String
+local BINARY_STRING_TYPE = VariantTypes.BinaryString
 
 local DecoderModule = {
 	Type = { STRING_TYPE, BINARY_STRING_TYPE },

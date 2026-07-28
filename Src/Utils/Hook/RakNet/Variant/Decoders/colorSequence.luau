@@ -1,6 +1,8 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 --// Constants \\--
-local COLOR_SEQUENCE_TYPE = 0x26
-local COLOR_SEQUENCE_KEYPOINT_TYPE = 0x27
+local COLOR_SEQUENCE_TYPE = VariantTypes.ColorSequence
+local COLOR_SEQUENCE_KEYPOINT_TYPE = VariantTypes.ColorSequenceKeypoint
 
 local DecoderModule = {
 	Type = { COLOR_SEQUENCE_TYPE, COLOR_SEQUENCE_KEYPOINT_TYPE },

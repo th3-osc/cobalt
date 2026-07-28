@@ -1,8 +1,10 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 --// Constants \\--
-local FACS_DATA_TYPE = 0x3A
-local NET_ASSET_HANDLE_TYPE = 0x3B
-local NET_ASSET_REF_TYPE = 0x3C
-local SLIM_REPLICATION_DATA_TYPE = 0x3F
+local FACS_DATA_TYPE = VariantTypes.FacsReplicationData
+local NET_ASSET_HANDLE_TYPE = VariantTypes.NetAssetHandle
+local NET_ASSET_REF_TYPE = VariantTypes.NetAssetRef
+local SLIM_REPLICATION_DATA_TYPE = VariantTypes.SlimReplicationData
 
 local DecoderModule = {
 	Type = {

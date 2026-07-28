@@ -1,8 +1,10 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 --// Constants \\--
-local VECTOR2_TYPE = 0x15
-local VECTOR3_TYPE = 0x16
-local VECTOR2INT16_TYPE = 0x18
-local VECTOR3INT16_TYPE = 0x19
+local VECTOR2_TYPE = VariantTypes.Vector2
+local VECTOR3_TYPE = VariantTypes.Vector3
+local VECTOR2INT16_TYPE = VariantTypes.Vector2int16
+local VECTOR3INT16_TYPE = VariantTypes.Vector3int16
 
 local DecoderModule = {
 	Type = { VECTOR2_TYPE, VECTOR3_TYPE, VECTOR2INT16_TYPE, VECTOR3INT16_TYPE },

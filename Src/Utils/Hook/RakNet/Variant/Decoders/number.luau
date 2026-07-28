@@ -1,12 +1,13 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local INT_TYPE = 0x0A
-local FLOAT_TYPE = 0x0B
-local DOUBLE_TYPE = 0x0C
-local INT64_TYPE = 0x2C
-local UINT_TYPE = 0x22
+local INT_TYPE = VariantTypes.Int
+local FLOAT_TYPE = VariantTypes.Float
+local DOUBLE_TYPE = VariantTypes.Double
+local INT64_TYPE = VariantTypes.Int64
+local UINT_TYPE = VariantTypes.SystemAddress
 
 local DecoderModule = {
 	Type = { INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, UINT_TYPE },

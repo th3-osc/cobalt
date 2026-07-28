@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local TUPLE_TYPE = 0x1D
-local ARRAY_TYPE = 0x1E
+local TUPLE_TYPE = VariantTypes.Tuple
+local ARRAY_TYPE = VariantTypes.Array
 
 local DecoderModule = {
 	Type = { TUPLE_TYPE, ARRAY_TYPE },

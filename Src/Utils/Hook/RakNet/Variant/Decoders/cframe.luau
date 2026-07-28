@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local CFRAME_V1_TYPE = 0x1A
-local CFRAME_TYPE = 0x1B
+local CFRAME_V1_TYPE = VariantTypes.CoordinateFrameLegacy
+local CFRAME_TYPE = VariantTypes.CoordinateFrame
 
 local DecoderModule = {
 	Type = { CFRAME_V1_TYPE, CFRAME_TYPE },

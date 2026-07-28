@@ -1,8 +1,9 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 local DecoderModule = {
-	Type = 0x38,
+	Type = VariantTypes.Buffer,
 }
 
 function DecoderModule.Parse(data: buffer, offset: number, _t: number, _parser: any, _depth: number)

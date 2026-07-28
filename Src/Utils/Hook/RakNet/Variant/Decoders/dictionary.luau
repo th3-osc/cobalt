@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local DICTIONARY_TYPE = 0x1F
-local MAP_TYPE = 0x20
+local DICTIONARY_TYPE = VariantTypes.Dictionary
+local MAP_TYPE = VariantTypes.Map
 
 local DecoderModule = {
 	Type = { DICTIONARY_TYPE, MAP_TYPE },

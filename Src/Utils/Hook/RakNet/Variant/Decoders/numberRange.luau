@@ -1,5 +1,7 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 local DecoderModule = {
-	Type = 0x25,
+	Type = VariantTypes.NumberRange,
 }
 
 function DecoderModule.Parse(data: buffer, offset: number, _t: number, _parser: any, _depth: number)

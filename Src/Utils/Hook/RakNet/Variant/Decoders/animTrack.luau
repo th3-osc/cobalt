@@ -1,11 +1,12 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local ANIM_TRACK_VARIANT_TYPE = 0x40
-local ANIM_TRACK_PLAY_STATE_TYPE = 0x41
-local ANIM_TRACK_METADATA_TYPE = 0x42
-local ANIM_TRACK_WEIGHT_TYPE = 0x43
+local ANIM_TRACK_VARIANT_TYPE = VariantTypes.AnimTrackVariant
+local ANIM_TRACK_PLAY_STATE_TYPE = VariantTypes.AnimTrackPlayState
+local ANIM_TRACK_METADATA_TYPE = VariantTypes.AnimTrackMetadata
+local ANIM_TRACK_WEIGHT_TYPE = VariantTypes.AnimTrackWeight
 
 local DecoderModule = {
 	Type = {

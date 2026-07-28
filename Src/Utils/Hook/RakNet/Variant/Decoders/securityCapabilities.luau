@@ -1,3 +1,5 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 -- Enum.SecurityCapability.Value is NOT the bit index — engine uses a sparse map.
 local BIT_TO_CAPABILITY: { [number]: string } = {
 	[0] = "Plugin",
@@ -54,7 +56,7 @@ local BIT_TO_CAPABILITY: { [number]: string } = {
 }
 
 local DecoderModule = {
-	Type = 0x37,
+	Type = VariantTypes.SecurityCapabilities,
 }
 
 local function fromBitmask(lo: number, hi: number): SecurityCapabilities

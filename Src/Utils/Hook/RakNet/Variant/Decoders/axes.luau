@@ -1,3 +1,5 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 local AXIS_VALUES = {
 	Enum.Axis.X,
 	Enum.Axis.Y,
@@ -5,7 +7,7 @@ local AXIS_VALUES = {
 }
 
 local DecoderModule = {
-	Type = 0x11,
+	Type = VariantTypes.Axes,
 }
 
 function DecoderModule.Parse(data: buffer, offset: number, _t: number, _parser: any, _depth: number)

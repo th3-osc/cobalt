@@ -1,6 +1,6 @@
 --// Imports \\--
 local raknet = require("@src/Utils/Hook/RakNet/Wrapper")
-local Constants = require("@src/Spy/Hooks/RakNet/Constants")
+local Constants = require("@src/Utils/Hook/RakNet/Constants")
 
 --// Utils \\--
 local Lookup = require("@src/Utils/Hook/RakNet/Lookup")

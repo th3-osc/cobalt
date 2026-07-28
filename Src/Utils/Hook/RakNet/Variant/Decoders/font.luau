@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 --// Constants \\--
-local FONT31_TYPE = 0x31
-local FONT36_TYPE = 0x36
+local FONT31_TYPE = VariantTypes.FontLegacy
+local FONT36_TYPE = VariantTypes.Font
 
 local DecoderModule = {
 	Type = { FONT31_TYPE, FONT36_TYPE },

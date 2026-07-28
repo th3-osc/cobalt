@@ -1,9 +1,10 @@
 --// Imports \\--
 local Codec = require(script.Parent.Parent.Parent.Codec)
 local Lookup = require(script.Parent.Parent.Parent.Lookup)
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
 
 local DecoderModule = {
-	Type = 0x3D,
+	Type = VariantTypes.Content,
 }
 
 local KIND_ID_URI: { [number]: (number) -> string } = {

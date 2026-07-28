@@ -1,5 +1,7 @@
-local NIL_TYPE = 0x00
-local NIL_ALT_TYPE = 0x03
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
+local NIL_TYPE = VariantTypes.Nil
+local NIL_ALT_TYPE = VariantTypes.NilAlt
 
 local DecoderModule = {
 	Type = { NIL_TYPE, NIL_ALT_TYPE },

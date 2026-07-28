@@ -1,7 +1,9 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 local MAX_DEPTH = 3
 
 local DecoderModule = {
-	Type = 0x21,
+	Type = VariantTypes.ContentId,
 }
 
 function DecoderModule.Parse(data: buffer, offset: number, _t: number, parser: any, depth: number)

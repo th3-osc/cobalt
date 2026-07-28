@@ -1,3 +1,5 @@
+local VariantTypes = require(script.Parent.Parent.Parent.Constants).VariantTypes
+
 local FACE_NORMALS = {
 	Enum.NormalId.Right,
 	Enum.NormalId.Top,
@@ -8,7 +10,7 @@ local FACE_NORMALS = {
 }
 
 local DecoderModule = {
-	Type = 0x10,
+	Type = VariantTypes.Faces,
 }
 
 function DecoderModule.Parse(data: buffer, offset: number, _t: number, _parser: any, _depth: number)
