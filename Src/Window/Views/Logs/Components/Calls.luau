@@ -385,7 +385,12 @@ return function(props: {
 				:Play()
 		end)
 
+		local CallContextMenu = GetSharedCallContextMenu()
 		CallFrame.MouseButton1Click:Connect(function()
+			if CallContextMenu:ConsumeLongPress(CallFrame) then
+				return
+			end
+
 			local Data = self.CallFrameData[CallFrame]
 			if Data and Data.CallInfo and Window.Modals.Info then
 				Window.Modals.Info:Open(Data.CallInfo)
@@ -402,13 +407,12 @@ return function(props: {
 			return true
 		end
 
-		local CallContextMenu = GetSharedCallContextMenu()
 		CallFrame.MouseButton2Click:Connect(function()
 			if not PrepareCallContext() then
 				return
 			end
 
-			CallContextMenu.Open()
+			CallContextMenu.Open(nil, CallFrame)
 		end)
 		CallContextMenu:BindLongPress(CallFrame, PrepareCallContext)
 

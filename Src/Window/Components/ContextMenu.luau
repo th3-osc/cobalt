@@ -1,10 +1,12 @@
 local Interface = require("@src/Utils/UI/Interface")
 local Icons = require("@src/Utils/UI/Assets/Icons")
+local Input = require("@src/Window/Utils/Input/Input")
 
 local ContextMenu = {}
 export type ContextMenu = {
 	CurrentContext: {
 		Parent: GuiObject,
+		Anchor: GuiObject?,
 		Options: { GuiObject },
 		Owner: ContextMenu,
 		MouseOnCursorPosition: boolean?,
@@ -72,6 +74,23 @@ function ContextMenu.new(
 	})
 	self.SizeConstraint = self.Frame.UISizeConstraint
 
+	wax.shared.Connect(wax.shared.UserInputService.InputBegan:Connect(function(InputObject: InputObject)
+		if not Input.IsClickInput(InputObject) then
+			return
+		end
+
+		local CurrentContext = self.CurrentContext
+		if not CurrentContext then
+			return
+		end
+
+		local Anchor = CurrentContext.Anchor or CurrentContext.Parent
+		local IsOverAnchor = Anchor.Parent ~= nil and Input.IsMouseOverFrame(Anchor, InputObject.Position)
+		if not (Input.IsMouseOverFrame(self.Frame, InputObject.Position) or IsOverAnchor) then
+			CurrentContext:Close()
+		end
+	end))
+
 	return self
 end
 
@@ -85,10 +104,12 @@ function ContextMenu:Create(
 )
 	local ContextData = {
 		Parent = Parent,
+		Anchor = Parent,
 		Options = {},
 		Owner = self,
 		MouseOnCursorPosition = MouseOnCursorPosition,
 		DisplayOptions = DisplayOptions or {},
+		SuppressedClicks = setmetatable({}, { __mode = "k" }),
 	}
 
 	local function BuildContextMenu(MenuOptions: {})
@@ -221,17 +242,14 @@ function ContextMenu:Create(
 		end
 	end
 
-	function ContextData.Open(InputPosition: Vector2?)
+	function ContextData.Open(InputPosition: Vector2?, Anchor: GuiObject?)
 		local Owner = ContextData.Owner
-		if Owner.CurrentContext == ContextData then
-			return
-		end
-
 		if Owner.CurrentContext then
 			Owner.CurrentContext.Close()
 		end
 
 		Owner.CurrentContext = ContextData
+		ContextData.Anchor = Anchor or Parent
 		Owner.Frame.CanvasPosition = Vector2.zero
 		local MaxHeight = ContextData.DisplayOptions.MaxHeight
 		Owner.Frame.AutomaticSize = if MaxHeight then Enum.AutomaticSize.X else Enum.AutomaticSize.XY
@@ -262,8 +280,8 @@ function ContextMenu:Create(
 			)
 		else
 			Owner.Frame.Position = UDim2.fromOffset(
-				Parent.AbsolutePosition.X / DPIScale,
-				(Parent.AbsolutePosition.Y + Parent.AbsoluteSize.Y) / DPIScale
+				ContextData.Anchor.AbsolutePosition.X / DPIScale,
+				(ContextData.Anchor.AbsolutePosition.Y + ContextData.Anchor.AbsoluteSize.Y) / DPIScale
 			)
 		end
 
@@ -281,35 +299,35 @@ function ContextMenu:Create(
 
 	function ContextData:BindLongPress(Target: GuiObject?, BeforeOpen: (() -> boolean?)?)
 		local LongPressTarget = Target or Parent
-		local SuppressedClick = false
-		local PreviousInteractable = true
 		return LongPressTarget.TouchLongPress:Connect(function(TouchPositions: { Vector2 }, State: Enum.UserInputState)
 			if State == Enum.UserInputState.Begin then
 				if BeforeOpen and BeforeOpen() == false then
 					return
 				end
 
-				-- Prevent GuiButton.MouseButton1Click from firing when the held touch is released.
-				if LongPressTarget:IsA("GuiButton") then
-					PreviousInteractable = LongPressTarget.Interactable
-					SuppressedClick = true
-					LongPressTarget.Interactable = false
+				local SuppressionToken = {}
+				ContextData.SuppressedClicks[LongPressTarget] = SuppressionToken
+				ContextData.Open(TouchPositions[1], LongPressTarget)
+			elseif State == Enum.UserInputState.End or State == Enum.UserInputState.Cancel then
+				local SuppressionToken = ContextData.SuppressedClicks[LongPressTarget]
+				if SuppressionToken then
+					task.delay(0.1, function()
+						if ContextData.SuppressedClicks[LongPressTarget] == SuppressionToken then
+							ContextData.SuppressedClicks[LongPressTarget] = nil
+						end
+					end)
 				end
-				ContextData.Open(TouchPositions[1])
-			elseif
-				(State == Enum.UserInputState.End or State == Enum.UserInputState.Cancel)
-				and SuppressedClick
-				and LongPressTarget:IsA("GuiButton")
-			then
-				SuppressedClick = false
-				local RestoreInteractable = PreviousInteractable
-				task.defer(function()
-					if LongPressTarget.Parent then
-						LongPressTarget.Interactable = RestoreInteractable
-					end
-				end)
 			end
 		end)
+	end
+
+	function ContextData:ConsumeLongPress(Target: GuiObject): boolean
+		if not self.SuppressedClicks[Target] then
+			return false
+		end
+
+		self.SuppressedClicks[Target] = nil
+		return true
 	end
 
 	function ContextData.Close()
@@ -321,6 +339,7 @@ function ContextMenu:Create(
 		for Object, _ in pairs(ContextData.Options) do
 			Object.Parent = nil
 		end
+		ContextData.Anchor = Parent
 		ContextData.Owner.CurrentContext = nil
 	end
 

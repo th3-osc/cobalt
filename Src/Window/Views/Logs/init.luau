@@ -5,7 +5,6 @@ local Types = require("@src/Window/Types")
 local LogStore = require("@src/Utils/LogStore")
 
 local Drag = require("@src/Window/Utils/Input/Drag")
-local Input = require("@src/Window/Utils/Input/Input")
 
 --// UI \\--
 return function(props: {
@@ -185,23 +184,6 @@ return function(props: {
 			LogList:EnsureLogButton(Log)
 			LogList:QueueLogButtonUpdate(Log)
 			LogCalls:HandleCallAdded(Log, CallIndex)
-		end
-	end))
-
-	wax.shared.Connect(wax.shared.UserInputService.InputBegan:Connect(function(InputObject: InputObject)
-		if not Input.IsClickInput(InputObject) then
-			return
-		end
-
-		local CurrentContext = ContextMenu.CurrentContext
-		if
-			CurrentContext
-			and not (
-				Input.IsMouseOverFrame(ContextMenu.Frame, InputObject.Position)
-				or Input.IsMouseOverFrame(CurrentContext.Parent, InputObject.Position)
-			)
-		then
-			CurrentContext:Close()
 		end
 	end))
 

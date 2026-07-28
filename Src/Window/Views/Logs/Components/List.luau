@@ -152,7 +152,12 @@ return function(props: {
 			Parent = Button,
 		})
 
+		local LogContextMenu
 		Button.MouseButton1Click:Connect(function()
+			if LogContextMenu and LogContextMenu:ConsumeLongPress(Button) then
+				return
+			end
+
 			if LogsPage.GetCurrentLog() == Log then
 				return
 			end
@@ -217,7 +222,7 @@ return function(props: {
 			end
 		end
 
-		local LogContextMenu = ContextMenu:Create(Button, ContextMenuOptions, true)
+		LogContextMenu = ContextMenu:Create(Button, ContextMenuOptions, true)
 		Button.MouseButton2Click:Connect(LogContextMenu.Toggle)
 		LogContextMenu:BindLongPress(Button)
 
