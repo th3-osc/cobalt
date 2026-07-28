@@ -291,8 +291,8 @@ wax.shared.Unload = function()
 	table.clear(wax.shared.Logs)
 	table.clear(wax.shared.IncomingLogConnectionFunctions)
 
-	getgenv().CobaltInitialized = false
-	getgenv().Cobalt = nil
+	getgenv().svj = false
+	getgenv().sv = nil
 
 	wax.shared.Communicator:Destroy()
 	wax.shared.ScreenGui:Destroy()
