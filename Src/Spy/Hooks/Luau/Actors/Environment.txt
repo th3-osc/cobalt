@@ -6,11 +6,11 @@
 	To modify the code, modify the source files where the export regions are defined.
 ]]
 
-if getgenv().CobaltInitialized == true then
+if getgenv().svj == true then
 	return
 end
 
-getgenv().CobaltInitialized = true
+getgenv().svj = true
 
 type ActorData = {
 	Token: string,
