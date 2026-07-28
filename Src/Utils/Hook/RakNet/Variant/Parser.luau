@@ -32,6 +32,8 @@ end
 local Parser = {}
 Parser.__index = Parser
 
+local MAX_NESTING_DEPTH = 64
+
 function Parser.new(data: buffer)
 	LazilyLoadDecoders()
 	assert(Decoders, "Could not load variant decoders.")
@@ -47,6 +49,10 @@ function Parser:Parse(offset: number, depth: number?): { Result: any, Offset: nu
 
 	local length = buffer.len(self.Data)
 	if offset >= length then
+		return { Result = nil, Offset = -1 }
+	end
+
+	if depth > MAX_NESTING_DEPTH then
 		return { Result = nil, Offset = -1 }
 	end
 
@@ -79,7 +85,8 @@ function Parser:ParseArgs(offset: number, depth: number?): ParsedArguments
 	end
 
 	local count, nextOffset = Codec.LEB128(self.Data, offset)
-	if count > 50 then
+	local remainingBytes = length - nextOffset
+	if count > remainingBytes then
 		return { Values = {}, Offset = -1, Count = 0 }
 	end
 

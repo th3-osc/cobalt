@@ -5,21 +5,16 @@ local Codec = require(script.Parent.Parent.Parent.Codec)
 local DICTIONARY_TYPE = 0x1F
 local MAP_TYPE = 0x20
 
-local MAX_DEPTH = 4
-local MAX_COUNT = 64
-
 local DecoderModule = {
 	Type = { DICTIONARY_TYPE, MAP_TYPE },
 }
 
 function DecoderModule.Parse(data: buffer, offset: number, _t: number, parser: any, depth: number)
-	if depth >= MAX_DEPTH then
-		return { Result = {}, Offset = offset }
-	end
-
 	local length = buffer.len(data)
 	local count, nextOffset = Codec.LEB128(data, offset)
-	if count > MAX_COUNT then
+	local remainingBytes = length - nextOffset
+	local maxPossibleCount = remainingBytes // 2
+	if count > maxPossibleCount then
 		return { Result = {}, Offset = -1 }
 	end
 
